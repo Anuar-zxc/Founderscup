@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orbit — аналитика подписчиков</title>
+<meta name="description" content="Кто подписался, кто отписался, взаимные подписки — по официальному архиву Instagram, без пароля.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fff;--card:#f6f6f8;--line:#e6e6ea;--ink:#0b0b0f;--muted:#6e6e78;
+  --action:#4c5bf0;--gain:#4c5bf0;--loss:#e5484d;--loss-text:#c9303c;--mutual:#8b5cf6;
+  --grad:linear-gradient(135deg,#4f7bff 0%,#8b5cf6 55%,#e64da6 100%);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Inter",system-ui,sans-serif;
+  color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#141416;--line:#26262b;--ink:#f5f5f7;--muted:#a1a1aa;--action:#7b87ff;--gain:#7b87ff;--loss:#ff6369;--loss-text:#ff7b80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);letter-spacing:-0.01em}
+button,input{font:inherit;color:inherit;letter-spacing:inherit}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;border-inline:1px solid var(--line)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:24px;letter-spacing:-0.04em}
+.icon-btn{width:44px;height:44px;display:grid;place-items:center;border:0;background:none;border-radius:12px;cursor:pointer}
+.icon-btn:hover{background:var(--card)}
+main{flex:1;padding:16px 16px 96px}
+nav.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:10.5px;color:var(--muted);cursor:pointer;min-height:48px}
+nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:600}
+nav.tabs svg{width:26px;height:26px}
+.profile{display:flex;align-items:center;gap:20px}
+.ring{padding:3px;border-radius:50%;background:var(--grad);flex:none}
+.ring>.inner{padding:3px;border-radius:50%;background:var(--bg)}
+.av{border-radius:50%;display:grid;place-items:center;font-weight:600;flex:none}
+.stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);text-align:center}
+.stats b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.name{margin:12px 0 2px;font-weight:600;font-size:15px}
+.sub{color:var(--muted);font-size:13px;margin:0}
+.row{display:flex;gap:8px;margin-top:14px}
+.btn{flex:1;height:38px;border-radius:10px;border:0;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 14px}
+.btn.primary{background:var(--action);color:#fff}
+.btn.gray{background:var(--card)}
+.btn:hover{filter:brightness(.96)}
+h2{font-size:17px;margin:24px 0 10px;display:flex;justify-content:space-between;align-items:baseline;letter-spacing:-0.02em}
+h2 small{font-size:13px;color:var(--muted);font-weight:400}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.card{background:var(--card);border-radius:16px;padding:12px 14px}
+.card b{font-size:24px;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;display:block}
+.card span{font-size:13px;color:var(--muted)}
+.stories{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.story{display:flex;flex-direction:column;align-items:center;gap:6px;width:68px;flex:none;font-size:12px;text-decoration:none;color:var(--ink)}
+.story span{max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg{display:flex;border-bottom:1px solid var(--line);margin:0 -16px 8px;overflow-x:auto;scrollbar-width:none}
+.seg button{flex:1;border:0;background:none;padding:12px 10px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.seg button[aria-selected="true"]{color:var(--ink);font-weight:600;border-color:var(--ink)}
+.search{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:10px;padding:0 12px;height:38px;margin:8px 0}
+.search input{border:0;background:none;outline:none;flex:1;font-size:15px}
+.list{list-style:none;margin:0;padding:0}
+.item{display:flex;align-items:center;gap:12px;padding:8px 0}
+.item .who{flex:1;min-width:0}
+.item .who b{display:block;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .who span{font-size:13px;color:var(--muted)}
+.item a.open{font-size:13px;font-weight:600;background:var(--card);color:var(--ink);text-decoration:none;padding:8px 12px;border-radius:8px}
+.badge{font-size:11px;font-weight:600;padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:1px}
+.badge.m{background:color-mix(in srgb,var(--mutual) 14%,transparent);color:var(--mutual)}
+.gain{color:var(--gain)}.loss{color:var(--loss-text)}
+.empty{text-align:center;color:var(--muted);padding:32px 12px;font-size:14px}
+.drop{border:1.5px dashed var(--line);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;transition:.15s}
+.drop.over{border-color:var(--action);background:color-mix(in srgb,var(--action) 6%,transparent)}
+.steps{margin:0;padding-left:20px;font-size:14px;line-height:1.6}
+.note{display:flex;gap:10px;background:var(--card);border-radius:14px;padding:12px;font-size:13px;color:var(--muted);margin-top:16px}
+.chart{background:var(--card);border-radius:16px;padding:14px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 8px;border-radius:8px;opacity:0;transition:opacity .1s;z-index:20;font-variant-numeric:tabular-nums}
+.snap{display:flex;justify-content:space-between;font-size:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:14px;z-index:30}
+a{color:var(--action)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F7BFF"/><stop offset=".55" stop-color="#8B5CF6"/><stop offset="1" stop-color="#E64DA6"/></linearGradient></defs><ellipse cx="14" cy="14" rx="12" ry="5.5" transform="rotate(-25 14 14)" fill="none" stroke="url(#og)" stroke-width="2.4"/><circle cx="14" cy="14" r="5.5" fill="url(#og)"/><circle cx="24.9" cy="8.9" r="2.4" fill="#4F7BFF"/></svg>
+      orbit
+    </div>
+    <button class="icon-btn" id="hdr-import" aria-label="Обновить данные"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+  </header>
+  <main id="view"></main>
+  <nav class="tabs" aria-label="Разделы">
+    <button data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
+    <button data-tab="changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Изменения</button>
+    <button data-tab="lists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.8c1.8.7 3 2.5 3.5 5.2"/></svg>Связи</button>
+    <button data-tab="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M3 20h18"/><rect x="5" y="11" width="3" height="6" rx="1"/><rect x="10.5" y="6" width="3" height="11" rx="1"/><rect x="16" y="9" width="3" height="8" rx="1"/></svg>Аналитика</button>
+    <button data-tab="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Импорт</button>
+  </nav>
+</div>
+<div class="tip" id="tip" role="status"></div>
+<input type="file" id="file" accept=".zip,.json,.html" multiple hidden>
+<script type="module">
+const KEY = 'orbit.snapshots.v1';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => n.toLocaleString('ru-RU');
+const fdate = t => t ? new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+let state = { tab: 'home', seg: 'mutual', chg: 'new', q: '' };
+let snaps = load();
+
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(snaps)); } catch { toast('Не удалось сохранить в браузере'); } }
+function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; document.body.append(d); setTimeout(() => d.remove(), 2600); }
+
+/* ---------- parsing the official "Download your information" archive ---------- */
+function userOf(e) {
+  const s = (e.string_list_data || [])[0] || {};
+  let u = s.value || e.title || '';
+  if (!u && s.href) u = s.href.split('?')[0].split('/').filter(Boolean).pop() || '';
+  return { u: u.trim().toLowerCase().replace(/^_u\//, ''), t: s.timestamp ? s.timestamp * 1000 : null };
+}
+function parseJSON(text) {
+  const data = JSON.parse(text);
+  const arr = Array.isArray(data) ? data : (data.relationships_following || data.relationships_followers || Object.values(data).find(Array.isArray) || []);
+  return arr.map(userOf).filter(x => x.u);
+}
+function parseHTML(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  return [...doc.querySelectorAll('a[href*="instagram.com"]')].map(a => ({ u: a.textContent.trim().toLowerCase(), t: null })).filter(x => x.u);
+}
+function kindOf(name) {
+  const n = name.toLowerCase().split('/').pop();
+  if (/^followers(_\d+)?\.(json|html)$/.test(n)) return 'followers';
+  if (/^following(_\d+)?\.(json|html)$/.test(n)) return 'following';
+  return null;
+}
+async function readFiles(files) {
+  const out = { followers: [], following: [] }; let found = 0, newest = 0;
+  for (const f of files) {
+    newest = Math.max(newest, f.lastModified || 0);
+    if (f.name.toLowerCase().endsWith('.zip')) {
+      const { unzipSync, strFromU8 } = await import('https://esm.sh/fflate@0.8.2');
+      const entries = unzipSync(new Uint8Array(await f.arrayBuffer()), { filter: e => !!kindOf(e.name) });
+      for (const [name, bytes] of Object.entries(entries)) {
+        const k = kindOf(name); const txt = strFromU8(bytes);
+        out[k].push(...(name.endsWith('.html') ? parseHTML(txt) : parseJSON(txt))); found++;
+      }
+    } else {
+      const k = kindOf(f.name); if (!k) continue;
+      const txt = await f.text();
+      out[k].push(...(f.name.endsWith('.html') ? parseHTML(txt) : parseJSON(txt))); found++;
+    }
+  }
+  if (!found) throw new Error('Не нашли followers_*.json / following.json. Выберите ZIP-архив или эти файлы.');
+  return { ...out, takenAt: newest || Date.now() };
+}
+function dedupe(list) { const m = new Map(); for (const x of list) if (!m.has(x.u)) m.set(x.u, x.t); return [...m].map(([u, t]) => [u, t]); }
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+function addSnapshot({ followers, following, takenAt }) {
+  const fr = dedupe(followers), fg = dedupe(following);
+  const sum = hash(fr.map(x => x[0]).sort().join(',') + '|' + fg.map(x => x[0]).sort().join(','));
+  if (snaps.some(s => s.sum === sum)) { toast('Этот архив уже импортирован'); return false; }
+  snaps.push({ id: Date.now(), takenAt, sum, followers: fr, following: fg });
+  snaps.sort((a, b) => a.takenAt - b.takenAt); save(); return true;
+}
+
+/* ---------- analytics ---------- */
+function compute() {
+  const cur = snaps.at(-1); if (!cur) return null;
+  const prev = snaps.length > 1 ? snaps.at(-2) : null;
+  const F = new Map(cur.followers), G = new Map(cur.following);
+  const mutual = [...G.keys()].filter(u => F.has(u));
+  const notBack = [...G.keys()].filter(u => !F.has(u));
+  const fans = [...F.keys()].filter(u => !G.has(u));
+  let gained = [], lost = [], renames = [];
+  if (prev) {
+    const P = new Map(prev.followers);
+    gained = [...F.keys()].filter(u => !P.has(u));
+    lost = [...P.keys()].filter(u => !F.has(u));
+    const byT = new Map(lost.filter(u => P.get(u)).map(u => [P.get(u), u]));
+    renames = gained.filter(u => F.get(u) && byT.has(F.get(u))).map(u => ({ from: byT.get(F.get(u)), to: u }));
+    const rf = new Set(renames.map(r => r.from)), rt = new Set(renames.map(r => r.to));
+    gained = gained.filter(u => !rt.has(u)); lost = lost.filter(u => !rf.has(u));
+  }
+  return { cur, prev, F, G, mutual, notBack, fans, gained, lost, renames };
+}
+
+/* ---------- UI helpers ---------- */
+const PAL = [['#e8e7ff','#3f3aa8'],['#ffe4ef','#a3245e'],['#dff3e8','#1d6b41'],['#fff0d9','#8a5300'],['#e0eeff','#1f4f9a'],['#f1e6ff','#6b2fb3']];
+function avatar(u, size = 44) {
+  const [bg, fg] = PAL[parseInt(hash(u), 36) % PAL.length];
+  const ini = u.replace(/[^a-zа-я0-9]/gi, '').slice(0, 2).toUpperCase() || '?';
+  return `<div class="av" style="width:${size}px;height:${size}px;background:${bg};color:${fg};font-size:${Math.round(size * .36)}px" aria-hidden="true">${esc(ini)}</div>`;
+}
+const igUrl = u => `https://www.instagram.com/${encodeURIComponent(u)}/`;
+function row(u, sub, extra = '') {
+  return `<li class="item">${avatar(u)}<div class="who"><b>${esc(u)}${extra}</b><span>${sub}</span></div><a class="open" href="${igUrl(u)}" target="_blank" rel="noopener">Открыть</a></li>`;
+}
+function emptyState() {
+  return `<div class="empty"><p style="font-size:17px;color:var(--ink);font-weight:600;margin:0 0 6px">Пока нет данных</p><p style="margin:0 0 16px">Импортируйте архив Instagram или посмотрите демо.</p><div class="row" style="justify-content:center"><button class="btn primary" data-go="import">Импортировать архив</button><button class="btn gray" id="demo">Демо-данные</button></div></div>`;
+}
+
+/* ---------- views ---------- */
+function vHome(d) {
+  if (!d) return emptyState();
+  const { cur, prev, F, G, mutual, gained, lost } = d;
+  const net = gained.length - lost.length;
+  const newest = [...gained].slice(0, 12);
+  return `
+  <section class="profile">
+    <div class="ring"><div class="inner">${avatar('me', 80)}</div></div>
+    <div class="stats">
+      <div><b>${fmt(F.size)}</b><span>подписчики</span></div>
+      <div><b>${fmt(G.size)}</b><span>подписки</span></div>
+      <div><b style="color:var(--mutual)">${fmt(mutual.length)}</b><span>взаимные</span></div>
+    </div>
+  </section>
+  <p class="name">Ваш аккаунт</p>
+  <p class="sub">Снимок от ${fdate(cur.takenAt)} · всего снимков: ${snaps.length}</p>
+  <div class="row"><button class="btn primary" data-go="import">Обновить данные</button><button class="btn gray" data-go="lists">Кто не в ответ</button></div>
+  <h2>С прошлого снимка <small>${prev ? fdate(prev.takenAt) + ' → ' + fdate(cur.takenAt) : 'нужен второй снимок'}</small></h2>
+  <div class="cards">
+    <div class="card"><b class="gain">+${gained.length}</b><span>новых</span></div>
+    <div class="card"><b class="loss">−${lost.length}</b><span>отписались</span></div>
+    <div class="card"><b>${net >= 0 ? '+' : '−'}${Math.abs(net)}</b><span>прирост</span></div>
+  </div>
+  ${newest.length ? `<h2>Новые подписчики <small><a href="#" data-go="changes">Все</a></small></h2>
+  <div class="stories">${newest.map(u => `<a class="story" href="${igUrl(u)}" target="_blank" rel="noopener"><div class="ring"><div class="inner">${avatar(u, 56)}</div></div><span>${esc(u)}</span></a>`).join('')}</div>` : ''}
+  <h2>Рост подписчиков <small>по дате подписки</small></h2>
+  <div class="chart">${growthChart(cur)}</div>`;
+}
+
+function vChanges(d) {
+  if (!d) return emptyState();
+  if (!d.prev) return `<div class="empty">Изменения появятся после второго импорта.<br>Запросите новый архив через несколько дней и загрузите его.</div>`;
+  const tabs = [['new', `Новые · ${d.gained.length}`], ['lost', `Отписались · ${d.lost.length}`], ['ren', `Сменили ник · ${d.renames.length}`]];
+  let items = '';
+  const period = `между ${fdate(d.prev.takenAt)} и ${fdate(d.cur.takenAt)}`;
+  if (state.chg === 'new') items = d.gained.map(u => row(u, `<span class="gain">подписался</span> · ${period}`, d.G.has(u) ? '<span class="badge m">взаимно</span>' : '')).join('');
+  if (state.chg === 'lost') items = d.lost.map(u => row(u, `<span class="loss">отписался или удалил аккаунт</span> · ${period}`, d.G.has(u) ? '<span class="badge m">вы подписаны</span>' : '')).join('');
+  if (state.chg === 'ren') items = d.renames.map(r => row(r.to, `раньше: ${esc(r.from)}`)).join('');
+  return `<div class="seg" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${state.chg === k}" data-chg="${k}">${l}</button>`).join('')}</div>
+  <ul class="list">${items || '<div class="empty">Здесь пусто</div>'}</ul>`;
+}
+
+function vLists(d) {
+  if (!d) return emptyState();
+  const segs = { mutual: ['Взаимные', d.mutual], notBack: ['Не в ответ', d.notBack], fans: ['Фанаты', d.fans] };
+  const [, all] = segs[state.seg];
+  const q = state.q.trim().toLowerCase();
+  const list = q ? all.filter(u => u.includes(q)) : all;
+  const sub = u => state.seg === 'mutual' ? 'вы подписаны друг на друга' : state.seg === 'notBack' ? 'вы подписаны, он(а) — нет' : 'подписан(а) на вас, вы — нет';
+  return `<div class="seg" role="tablist">${Object.entries(segs).map(([k, [l, a]]) => `<button role="tab" aria-selected="${state.seg === k}" data-seg="${k}">${l} · ${fmt(a.length)}</button>`).join('')}</div>
+  <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Поиск по нику" value="${esc(state.q)}" aria-label="Поиск по нику"></label>
+  <ul class="list">${list.slice(0, 300).map(u => row(u, sub(u))).join('') || '<div class="empty">Никого не найдено</div>'}</ul>
+  ${list.length > 300 ? `<p class="sub" style="text-align:center">Показаны первые 300 из ${fmt(list.length)} — уточните поиск</p>` : ''}`;
+}
+
+function vAnalytics(d) {
+  if (!d) return emptyState();
+  const ratio = d.G.size ? Math.round(d.mutual.length / d.G.size * 100) : 0;
+  const prevF = d.prev ? d.prev.followers.length : 0;
+  const churn = d.prev && prevF ? (d.lost.length / prevF * 100).toFixed(1) : '—';
+  return `
+  <div class="cards" style="grid-template-columns:repeat(2,1fr)">
+    <div class="card"><b>${ratio}%</b><span>взаимность (взаимные / подписки)</span></div>
+    <div class="card"><b>${churn}${churn === '—' ? '' : '%'}</b><span>отток с прошлого снимка</span></div>
+    <div class="card"><b>${fmt(d.notBack.length)}</b><span>не подписаны в ответ</span></div>
+    <div class="card"><b>${fmt(d.fans.length)}</b><span>фанаты</span></div>
+  </div>
+  <h2>Подписчики по снимкам</h2>
+  <div class="chart">${snaps.length > 1 ? snapChart() : '<p class="sub">Появится после второго импорта.</p>'}</div>
+  <h2>Новые и ушедшие <small>между снимками</small></h2>
+  <div class="chart">${snaps.length > 1 ? flowChart() : '<p class="sub">Появится после второго импорта.</p>'}</div>
+  <h2>Снимки</h2>
+  ${snaps.slice().reverse().map(s => `<div class="snap"><span>${fdate(s.takenAt)}</span><span class="sub">${fmt(s.followers.length)} подп. · ${fmt(s.following.length)} подписок</span></div>`).join('')}`;
+}
+
+function vImport() {
+  return `
+  <h2 style="margin-top:4px">Импорт архива Instagram</h2>
+  <ol class="steps">
+    <li>Откройте <a href="https://accountscenter.instagram.com/info_and_permissions/dyi/" target="_blank" rel="noopener">«Скачать информацию»</a> в Accounts Center.</li>
+    <li>Выберите «Некоторая информация» → <b>Подписчики и подписки</b>.</li>
+    <li>Формат <b>JSON</b>, период <b>«Всё время»</b>.</li>
+    <li>Когда придёт письмо — скачайте ZIP и перетащите его сюда.</li>
+  </ol>
+  <div class="drop" id="drop" tabindex="0" role="button" aria-label="Выбрать ZIP-архив или JSON-файлы" style="margin-top:16px">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+    <p style="margin:8px 0 2px;font-weight:600">Перетащите ZIP или JSON-файлы</p>
+    <p class="sub">followers_1.json, following.json — или весь архив</p>
+  </div>
+  <div class="row"><button class="btn gray" id="demo">Загрузить демо-данные</button>${snaps.length ? '<button class="btn gray" id="reset">Удалить все данные</button>' : ''}</div>
+  <div class="note"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Пароль от Instagram не нужен. Архив разбирается прямо в браузере и хранится только на этом устройстве.</span></div>`;
+}
+
+/* ---------- charts (single axis, thin marks, hover tooltips) ---------- */
+const W = 326, H = 120;
+function axisY(min, max, y) { return [min, Math.round((min + max) / 2), max].map(v => `<line x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${W}" y="${y(v) - 4}" text-anchor="end" font-size="10" fill="var(--muted)">${fmt(v)}</text>`).join(''); }
+function lineChart(pts, color, label) {
+  if (pts.length < 2) return '<p class="sub">Недостаточно данных для графика.</p>';
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys) || 1;
+  const x = v => (v - x0) / ((x1 - x0) || 1) * W, y = v => H - 8 - (v - y0) / ((y1 - y0) || 1) * (H - 24);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join('');
+  const hits = pts.map(p => `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="10" fill="transparent" data-tip="${fdate(p[0])}: ${fmt(p[1])} ${label}"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H + 18}" role="img" aria-label="График: ${label}">${axisY(y0, y1, y)}<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(xs.at(-1))}" cy="${y(ys.at(-1))}" r="4" fill="${color}" stroke="var(--card)" stroke-width="2"/><text x="0" y="${H + 14}" font-size="10" fill="var(--muted)">${fdate(x0)}</text><text x="${W}" y="${H + 14}" text-anchor="end" font-size="10" fill="var(--muted)">${fdate(x1)}</text>${hits}</svg>`;
+}
+function growthChart(cur) {
+  const ts = cur.followers.map(f => f[1]).filter(Boolean).sort((a, b) => a - b);
+  if (ts.length < 2) return '<p class="sub">В архиве нет дат подписки.</p>';
+  const step = Math.max(1, Math.floor(ts.length / 60)); const pts = [];
+  for (let i = 0; i < ts.length; i += step) pts.push([ts[i], i + 1]);
+  pts.push([ts.at(-1), ts.length]);
+  return lineChart(pts, 'var(--mutual)', 'подписчиков') + `<p class="sub" style="margin-top:6px;font-size:12px">Только те, кто подписан сейчас: ушедшие в архив не попадают.</p>`;
+}
+function snapChart() { return lineChart(snaps.map(s => [s.takenAt, s.followers.length]), 'var(--mutual)', 'подписчиков'); }
+function flowChart() {
+  const rows = []; for (let i = 1; i < snaps.length; i++) {
+    const P = new Set(snaps[i - 1].followers.map(f => f[0])), C = new Set(snaps[i].followers.map(f => f[0]));
+    rows.push({ t: snaps[i].takenAt, g: [...C].filter(u => !P.has(u)).length, l: [...P].filter(u => !C.has(u)).length });
+  }
+  const max = Math.max(1, ...rows.map(r => Math.max(r.g, r.l))), mid = H / 2, sc = (H / 2 - 10) / max;
+  const bw = Math.min(28, W / rows.length - 6), gap = W / rows.length;
+  const bars = rows.map((r, i) => { const cx = gap * i + gap / 2, x = cx - bw / 2; return `<rect x="${x}" y="${mid - r.g * sc}" width="${bw}" height="${Math.max(1, r.g * sc)}" rx="4" fill="var(--gain)"/><rect x="${x}" y="${mid + 2}" width="${bw}" height="${Math.max(1, r.l * sc)}" rx="4" fill="var(--loss)"/><rect x="${cx - gap / 2}" y="0" width="${gap}" height="${H}" fill="transparent" data-tip="${fdate(r.t)}: +${r.g} / −${r.l}"/>`; }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Новые и ушедшие подписчики между снимками"><line x1="0" x2="${W}" y1="${mid + 1}" y2="${mid + 1}" stroke="var(--line)"/>${bars}</svg><div class="legend"><span><i style="background:var(--gain)"></i>новые</span><span><i style="background:var(--loss)"></i>отписались</span></div>`;
+}
+
+/* ---------- demo data ---------- */
+function demo() {
+  const pre = ['aru','dias','madina','timur','aigerim','nurlan','zarina','yerlan','dana','askar','kamila','sanzhar','alina','bek','saule','arman','asel','daulet','gulnaz','ruslan'];
+  const suf = ['.s','_k','.art','.photo','_n','.dev','.k','_m','.trv','.b','.design','_0','.run','.kz','.cafe','_93','.film','.mkt'];
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const names = new Set(); while (names.size < 2600) names.add(pre[Math.floor(rnd() * pre.length)] + suf[Math.floor(rnd() * suf.length)] + (rnd() < .6 ? Math.floor(rnd() * 999) : ''));
+  const all = [...names]; const now = Date.now(), day = 864e5;
+  const base = all.slice(0, 2300).map((u, i) => ({ u, t: now - 400 * day + i * (390 * day / 2300) }));
+  const following = all.filter((_, i) => i % 2 === 0 && i < 2100).concat(all.slice(2400, 2520)).map(u => ({ u, t: now - 30 * day }));
+  const s1 = { followers: base, following, takenAt: now - 14 * day };
+  const lost1 = new Set(base.filter(() => rnd() < .012).map(f => f.u));
+  const s2f = base.filter(f => !lost1.has(f.u)).concat(all.slice(2300, 2360).map((u, i) => ({ u, t: now - 13 * day + i * 3e6 })));
+  const s2 = { followers: s2f, following, takenAt: now - 7 * day };
+  const lost2 = new Set(s2f.filter(() => rnd() < .006).map(f => f.u));
+  const s3f = s2f.filter(f => !lost2.has(f.u)).concat(all.slice(2360, 2384).map((u, i) => ({ u, t: now - 6 * day + i * 4e6 })));
+  const s3 = { followers: s3f, following: following.concat(all.slice(2360, 2370).map(u => ({ u, t: now }))), takenAt: now };
+  snaps = []; [s1, s2, s3].forEach(addSnapshot); toast('Демо-данные загружены'); go('home');
+}
+
+/* ---------- wiring ---------- */
+function render() {
+  const d = compute();
+  const v = { home: vHome, changes: vChanges, lists: vLists, analytics: vAnalytics, import: vImport }[state.tab];
+  $('#view').innerHTML = v(d);
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === state.tab ? 'page' : 'false'));
+  const q = $('#q'); if (q) { q.addEventListener('input', e => { state.q = e.target.value; const pos = e.target.selectionStart; render(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); }); }
+  const drop = $('#drop');
+  if (drop) {
+    drop.onclick = () => $('#file').click();
+    drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#file').click(); } };
+    drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+    drop.ondragleave = () => drop.classList.remove('over');
+    drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); handle([...e.dataTransfer.files]); };
+  }
+}
+function go(tab) { state.tab = tab; render(); window.scrollTo(0, 0); }
+async function handle(files) {
+  try { const r = await readFiles(files); if (addSnapshot(r)) { const d = compute(); toast(d.prev ? `Готово: +${d.gained.length} новых, −${d.lost.length} отписались` : `Снимок сохранён: ${fmt(d.F.size)} подписчиков`); go('home'); } }
+  catch (e) { console.error(e); toast(e.message || 'Не удалось прочитать архив'); }
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab],[data-go],[data-seg],[data-chg],#demo,#reset,#hdr-import'); if (!t) return;
+  if (t.dataset.tab) go(t.dataset.tab);
+  else if (t.dataset.go) { e.preventDefault(); go(t.dataset.go); }
+  else if (t.dataset.seg) { state.seg = t.dataset.seg; render(); }
+  else if (t.dataset.chg) { state.chg = t.dataset.chg; render(); }
+  else if (t.id === 'demo') demo();
+  else if (t.id === 'hdr-import') go('import');
+  else if (t.id === 'reset' && confirm('Удалить все снимки с этого устройства?')) { snaps = []; save(); render(); }
+});
+$('#file').addEventListener('change', e => { handle([...e.target.files]); e.target.value = ''; });
+const tip = $('#tip');
+document.addEventListener('pointermove', e => { const t = e.target.closest?.('[data-tip]'); if (t) { tip.textContent = t.dataset.tip; tip.style.left = e.clientX + 12 + 'px'; tip.style.top = e.clientY - 34 + 'px'; tip.style.opacity = 1; } else tip.style.opacity = 0; });
+render();
+</script>
+</body>
+</html>
